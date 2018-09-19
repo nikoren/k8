@@ -1,4 +1,4 @@
-k8_kubelet_extra_args: '"--fail-swap-on=false --cgroup-driver=cgroupfs --node-ip={{ node_ip }}"'
+k8_kubelet_extra_args: "--fail-swap-on=false --cgroup-driver=cgroupfs --node-ip={{ node_ip }}"
 k8_pod_network_cidr: '10.0.1.0/16'
 k8_apiserver_advertise_address: ''
 k8_ignore_preflight_errors: 'all'

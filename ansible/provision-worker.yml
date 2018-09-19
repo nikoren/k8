@@ -13,9 +13,9 @@
 - name: Provision vagrant
   hosts: all
   vars:
-    - k8_join_command:  "kubeadm join 10.0.99.1:6443 --token ak3q0h.u6hkizfqwke0zjn8 --discovery-token-ca-cert-hash sha256:77b9111675f3e188347bbeff9423454b1c709e3dcd70bbd390df8a3f3e2ccd9b"
+    - k8_join_command:  "kubeadm join 10.0.99.1:6443 --token 0wijja.40ps9zd78b6mea1n --discovery-token-ca-cert-hash sha256:e262ec90db7cd7bcfc3679d2419d5e5639e7cafaf0d0a0a870038082c60fe178"
   become: yes
   roles:
-      - common
-      - docker_ce
-      - k8
+    - common
+    - docker_ce
+    - k8

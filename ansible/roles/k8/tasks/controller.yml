@@ -1,5 +1,5 @@
 - debug:
-    msg: "{{ansible_default_ipv4.address}}"
+    msg: "{{ node_ip| default(ansible_default_ipv4.address)}}"
   tags:
     - jopa
 
@@ -7,7 +7,7 @@
   command: >
     kubeadm init
     --pod-network-cidr={{ k8_pod_network_cidr }}
-    --apiserver-advertise-address={{ kubernetes_apiserver_advertise_address | default(ansible_default_ipv4.address) }}
+    --apiserver-advertise-address={{ node_ip | default(ansible_default_ipv4.address) }}
     --ignore-preflight-errors={{ k8_ignore_preflight_errors }}
   register: kubeadmin_init
   failed_when: False

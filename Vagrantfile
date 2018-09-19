@@ -13,6 +13,7 @@
                 ansible.extra_vars = {
                     node_ip: "10.0.99.1"
                 }
+                ansible.raw_arguments = ["--diff", "-v"]
               end
           end
 
@@ -26,13 +27,13 @@
 
               worker1.vm.box = "bento/centos-7"
               worker1.vm.network :private_network, ip: "10.0.99.2"
-
+              worker1.vm.hostname = "worker1"
               worker1.vm.provision :ansible do |ansible|
                 ansible.playbook = "ansible/provision-worker.yml"
                 ansible.extra_vars = {
                     node_ip: "10.0.99.2"
                 }
-                ansible.raw_arguments = ["--diff", ""]
+                ansible.raw_arguments = ["--diff", "-v"]
               end
         end
 
@@ -44,16 +45,15 @@
                 v.cpus = 2
                 worker2.ssh.forward_agent = true
               end
-
               worker2.vm.box = "bento/centos-7"
               worker2.vm.network :private_network, ip: "10.0.99.3"
-
+              worker2.vm.hostname = "worker2"
               worker2.vm.provision :ansible do |ansible|
                 ansible.playbook = "ansible/provision-worker.yml"
                 ansible.extra_vars = {
-                    node_ip: "10.0.99.2"
+                    node_ip: "10.0.99.3"
                 }
+                ansible.raw_arguments = ["--diff", "-v"]
               end
         end
-
 end
