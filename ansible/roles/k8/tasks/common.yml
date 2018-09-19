@@ -1,0 +1,80 @@
+
+- name: Enable kubernetes repo
+  yum_repository:
+    name: Kubernetes
+    description: Official K8 repo
+    enabled: yes
+    gpgcheck: yes
+    repo_gpgcheck: yes
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    gpgkey:
+    - "https://packages.cloud.google.com/yum/doc/yum-key.gpg"
+    - "https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg"
+
+- name: Add Kubernetes GPG keys.
+  rpm_key:
+    key: "{{ item }}"
+    state: present
+  register: kubernetes_rpm_key
+  with_items:
+    - https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    - https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+- name: Make cache if Kubernetes GPG key changed.
+  command: "yum -q makecache -y --disablerepo='*' --enablerepo='Kubernetes'"
+  when: kubernetes_rpm_key is changed
+  args:
+    warn: no
+
+- name: Install kubernetes common components
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+#  when: "ansible_hostname.startswith('controller')"
+
+- name: Start kubelet (service that makes sure all the configured pods are running)
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+
+- name: Enable network filters
+  sysctl:
+    name: "{{ item }}"
+    value: 1
+    state: present
+  with_items:
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-iptables
+
+- name: Configure KUBELET_EXTRA_ARGS.
+  lineinfile:
+    path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    line: 'Environment="KUBELET_EXTRA_ARGS={{ k8_kubelet_extra_args }}"'
+    regexp: 'Environment="KUBELET_EXTRA_ARGS='
+    insertafter: '^Environment='
+    state: present
+  register: kubelet_unit_file
+
+- name: Reload systemd unit if args were changed.
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: kubelet
+  when: kubelet_unit_file is changed
+
+- name: Ensure kubelet is started and enabled at boot.
+  service:
+    name: kubelet
+    state: started
+    enabled: yes
+
+- name: Check if Kubernetes has already been initialized.
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubernetes_init_stat
+

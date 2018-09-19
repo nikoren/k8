@@ -1,0 +1,4 @@
+- name: Join node to Kubernetes master
+  shell: "{{ k8_join_command }}"
+  args:
+    creates:  /etc/kubernetes/kubelet.conf

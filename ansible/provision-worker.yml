@@ -1,0 +1,21 @@
+---
+
+# This playbooks should be running after provision-master.yml
+# the reason for this is the fact that master should generate appropriate token to allow workers to join
+# once such token has been generated, copy it into this playbooks and set as `k8_join_command` variable
+# for example result of provision-master.yml :
+
+  #TASK [k8 : Print command to join the cluster] **********************************
+  #ok: [controller1] =>
+  #  msg: kubeadm join 10.0.2.15:6443 --token 1lox2t.gjj4dwy0727hdpwe --discovery-token-ca-cert-hash sha256:e24b977769679cf2d383790651f3f513f37df79711b660589f86d6c7a2ac11ee
+
+
+- name: Provision vagrant
+  hosts: all
+  vars:
+    - k8_join_command:  "kubeadm join 10.0.99.1:6443 --token ak3q0h.u6hkizfqwke0zjn8 --discovery-token-ca-cert-hash sha256:77b9111675f3e188347bbeff9423454b1c709e3dcd70bbd390df8a3f3e2ccd9b"
+  become: yes
+  roles:
+      - common
+      - docker_ce
+      - k8

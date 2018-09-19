@@ -1,0 +1,80 @@
+- debug:
+    msg: "{{ansible_default_ipv4.address}}"
+  tags:
+    - jopa
+
+- name: Initialize Kubernetes master with kubeadm init.
+  command: >
+    kubeadm init
+    --pod-network-cidr={{ k8_pod_network_cidr }}
+    --apiserver-advertise-address={{ kubernetes_apiserver_advertise_address | default(ansible_default_ipv4.address) }}
+    --ignore-preflight-errors={{ k8_ignore_preflight_errors }}
+  register: kubeadmin_init
+  failed_when: False
+  when: kubernetes_init_stat.stat.exists == False
+
+- name: Print the init output to screen.
+  debug: var=kubeadmin_init.stdout
+  when:
+    - kubernetes_init_stat.stat.exists == False
+
+- name: Ensure .kube directory exists.
+  file:
+    path: ~/.kube
+    state: directory
+
+- name: Symlink the kubectl admin.conf to ~/.kube/conf.
+  file:
+    src: /etc/kubernetes/admin.conf
+    dest: ~/.kube/config
+    state: link
+
+- name: Configure Flannel networking.
+  command: "{{ item }}"
+  with_items:
+    - kubectl apply -f {{ k8_flannel_manifest_file_rbac }}
+    - kubectl apply -f {{ k8_flannel_manifest_file }}
+  register: flannel_result
+  changed_when: "'created' in flannel_result.stdout"
+
+## TODO: Check if taint exists with something like `kubectl describe nodes`
+## instead of using kubernetes_init_stat.stat.exists check.
+#- name: Allow pods on master node (if configured).
+#  command: "kubectl taint nodes --all node-role.kubernetes.io/master-"
+#  when:
+#    - kubernetes_allow_pods_on_master
+#    - kubernetes_init_stat.stat.exists == False
+
+- name: Check if Kubernetes Dashboard UI service already exists.
+  shell: kubectl get services --namespace kube-system | grep -q kubernetes-dashboard
+  changed_when: False
+  failed_when: False
+  register: k8_dashboard_service
+  when: k8_enable_web_ui
+
+- name: Enable the Kubernetes Web Dashboard UI (if configured).
+  command: "kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml"
+  when:
+    - k8_enable_web_ui
+    - k8_dashboard_service is failed
+
+- name: Get the kubeadm join command from the Kubernetes master.
+  shell: kubeadm token create --print-join-command
+  changed_when: False
+  when: inventory_hostname.startswith('controller')
+  run_once: yes
+  register: k8_join_command_result
+
+- name: Print command to join the cluster
+  debug:
+    msg: "{{ k8_join_command_result.stdout }}"
+
+#- name: Set the kubeadm join command globally.
+#  set_fact:
+#    k8_join_command: "{{ k8_join_command_result.stdout }}"
+#  when: k8_join_command_result.stdout is defined
+#  delegate_to: "{{ item }}"
+#  delegate_facts: True
+#  with_items: "{{ groups['all'] }}"
+#
+#- name:
